@@ -54,6 +54,14 @@ def fmt_price(x: float) -> str:
     return f"${x:,.2f}" if x >= 1 else f"${x:,.6f}"
 
 
+def fmt_holding(product: str, base: float, value: float) -> str:
+    """How much of a coin we hold, e.g. '6.7200 SOL ($350.25)' — or '—' if none."""
+    if base <= 0:
+        return "—"
+    amount = f"{base:,.4f}" if base >= 1 else f"{base:,.6f}"
+    return f"{amount} {product.split('-')[0]} ({fmt_money(value)})"
+
+
 def _stop(signum, _frame):
     global _running
     log.info("\n👋 Stopping after this round. Your money is safe and saved.")
@@ -115,7 +123,9 @@ def run_cycle(cfg: Config, md: MarketData, llm: LLMClient, pf: Portfolio, trader
             outcome = "waiting — no suggestion this round"
         else:
             outcome = trader.execute(decision, prices[product])
-        log.info("  %-10s %-12s → %s", coin_name(product), fmt_price(prices[product]), outcome)
+        holding = fmt_holding(product, pf.base_held(product), pf.position_value(product, prices[product]))
+        log.info("  %-10s %-12s  holding %-24s → %s",
+                 coin_name(product), fmt_price(prices[product]), holding, outcome)
 
     pf.save()
     final = pf.snapshot(prices)
